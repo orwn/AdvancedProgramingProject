@@ -19,6 +19,7 @@ import json
 
 from google.appengine.ext import ndb 
 from google.appengine.api import users
+from datetime import datetime
 # ...
 
 # Class of message
@@ -27,6 +28,7 @@ from google.appengine.api import users
 class User(ndb.Model):
 	nickname = ndb.StringProperty()
 	link = ndb.StringProperty()
+	lastSeen = ndb.DateTimeProperty()
 	#mail = ndb.StringProperty()
 
 	
@@ -64,6 +66,7 @@ class Message(ndb.Model):
 	text = ndb.TextProperty()
 	longtitude = ndb.FloatProperty()
 	latitude = ndb.FloatProperty()
+	datetime = ndb.DateTimeProperty(auto_now_add = True)
 
 
 class MessageRead(ndb.Model):
@@ -145,13 +148,13 @@ class UserLogin(webapp2.RequestHandler):
         else:
         	# sign in for debuggin through browser
             greeting = ('<a href="%s">Sign in or register</a>.' %
-                        users.create_login_url('/saveuserindatabase'))
+                        users.create_login_url('/'))
 
         self.response.out.write('<html><body>%s</body></html>' % greeting)
         user = users.get_current_user()
         if user:
         	self.response.out.write('user')
-       		user = User(id = user.nickname(),nickname = user.nickname(),link = user.nickname())
+       		f_addUser(user.nickname(),link = user.nickname())
 
 # SaveUser action
 class SaveUser(webapp2.RequestHandler):
@@ -212,11 +215,15 @@ class GetMyChannels(webapp2.RequestHandler):
 # GetNUmOfClients action
 class GetNumOfClients(webapp2.RequestHandler):
 	def post(self):
-		key = ndb.Key('Channel', self.request.get('id'))
+		channel_id = self.request.get('id')
+		# Checking if channel exists 
+		
 		# Selecting the chanek user when the chanel equals to the chanel name
-		query = ndb.gql("""SELECT * FROM ChannelUser WHERE channel = :name""",name = key)
+
+		#self.response.out.write(key.get())
+	
 		# Respinding the count
-		self.response.out.write(query.count())
+		self.response.out.write(f_getNumOfClient(channel_id))
 
 # Update action
 class Update(webapp2.RequestHandler):
@@ -275,7 +282,7 @@ class JoinChannel(webapp2.RequestHandler):
 			channel_key = ndb.Key('Channel',channel_id)
 	
 			if f_isChannelExist(channel_id):
-				f_addChannelUser(channel_id,user.nickname())
+				f_addChannelUser(user.nickname(),channel_id)
 				m = R_Msg('1','')
 			else:
 				m = R_Msg('0','Channel does not exist')
@@ -307,11 +314,37 @@ class SendMessage(webapp2.RequestHandler):
 
 		self.response.write(m.to_JSON())
 
+
+class LeaveChannel(webapp2.RequestHandler):
+	def post(self):
+		channel_id = self.request.get('id')
+		user = users.get_current_user()
+		if user:
+			if f_isChannelExist(channel_id):
+				if f_isChannelUserExist(channel_id,user.nickname()):
+					f_delChannelUser(user.nickname(),channel_id)
+					if f_getNumOfClient == 0:
+						f_delChannl(channel_id)
+					m = R_Msg('1','')
+
+				else:
+					m = R_Msg('0','User does not belong to channel')
+
+					
+			else:
+				m = R_Msg('0','Channel does not exist')
+		else:
+			m = R_Msg('0','User is disconnected!')
+
+		self.response.write(m.to_JSON())
+
+
+
 # function for adding data for table
 
 # Add user
 def f_addUser(user_name,link):
-	user = User(id = user_name,nickname = user_name,link = link)
+	user = User(id = user_name,nickname = user_name,link = link,lastSeen = datetime.now())
 	user.put()
 	pass
 # Delete user
@@ -320,13 +353,13 @@ def f_delUser(user_name):
 	key.delete()
 
 # Add Message
-def f_addMessage(user_name,channel_id,text,longtitude,latitude,isRead):
+def f_addMessage(user_name,channel_id,text,longtitude,latitude):
 	user_key = ndb.Key('User', user_name)
 	channel_key = ndb.Key('Channel',channel_id)
 	message = Message(user = user_key,channel = channel_key,text = text,
 		longtitude=float(longtitude),latitude=float(latitude))
 	message.put()
-	f_addMessageRead(message.key,user_key,isRead)
+	#f_addMessageRead(message.key,user_key)
 
 # Add Channel
 def f_addChannel(channel_id,name,icon,isMine):
@@ -357,6 +390,13 @@ def f_delChannl(channel_id):
 	channel_key.delete()
 
 # 
+def f_isChannelUserExist(channel_id,user_name):
+	query = ndb.gql("""SELECT * FROM ChannelUser""")
+	count = 0
+	for channelUser in query:
+		if channelUser.channel.get().channel_id == chan_id and channelUser.user.get().name == user_name:
+			count = count+1
+
 def f_isChannelExist(channel_id):
 	query = ndb.gql("""SELECT * FROM Channel WHERE channel_id = :channel_id """,channel_id = channel_id)
 	return query.count()>0
@@ -375,6 +415,16 @@ def f_signAsRead(message,user_name):
 		message.isRead = True
 		message.put()
 
+def f_getNumOfClient(chan_id):
+	query = ndb.gql("""SELECT * FROM ChannelUser""")
+	count = 0
+	for channel in query:
+		if channel.channel.get().channel_id == chan_id:
+			count = count+1
+
+	return count
+	pass
+
 
 		
 app = webapp2.WSGIApplication([
@@ -388,6 +438,7 @@ app = webapp2.WSGIApplication([
     ('/getMyChannels', GetMyChannels),
     ('/addChannel',AddChannel),
     ('/joinChannel',JoinChannel),
+    ('/leaveChannel',LeaveChannel),
     ('/update',Update),
     ('/sendMessage',SendMessage)
 
