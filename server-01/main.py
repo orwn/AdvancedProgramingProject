@@ -16,7 +16,9 @@
 #
 import webapp2 
 import json
-
+import urllib2
+import urllib
+from google.appengine.api import urlfetch
 from google.appengine.ext import ndb 
 from google.appengine.api import users
 from datetime import datetime
@@ -52,12 +54,44 @@ class Channel_JSON:
 		self.icon = icon 
 		self.name = name
 
+	def to_JSON(self):
+		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
+
+# This class converts channel id to JSON
+class Channel_id_JSON:
+	def __init__(self,channel_id):
+		self.channel_id = channel_id
+
+	def to_JSON(self):
+		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
+
+# This class converts message to json
+class Message_Json:
+	def __init__(self,channel,text,longtitude,latitude):
+		self.channel = channel
+		self.text = text
+		self.longtitude = longtitude
+		self.latitude = latitude
+
+	def to_JSON(self):
+		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
+
+# This class converts server to json
+class Server_JSON:
+	def __init__(self,server):
+		self.server = server
+
+	def to_JSON(self):
+		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
+
+
 # Class inverts channels to JSON
 class Channels(ndb.Model):
 	def __init__(self, channels):
 		self.channels = channels
 	def to_JSON(self):
 		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
+
 
 # Class represents message the the data base
 class Message(ndb.Model):
@@ -121,21 +155,19 @@ class Unregister(webapp2.RequestHandler):
 # Main Handler (debugging)
 class MainHandler(webapp2.RequestHandler):
     def get(self):
-    	#test@example.com
-    	f_signAsRead('dasd','test@example.com')
-    	# user_key = ndb.Key('User', 'orwn')
-    	# channel_key = ndb.Key('Channel','c')
-    	# self.response.write(user_key)
-    	# self.response.write(users.get_current_user())
-    	# self.response.write(channel_key)
-    	# address_k = ndb.Key.from_path('Message', users.get_current_user().nickname(), channel_key, False)
-		#address = db.get(address_k)
-		#message = Message(user = user_key,channel = channel_key,text = "bla",longtitude=5,latitude=6)
-		#message.put()
-    	#messageRead = MessageRead(message = message,user = users.get_current_user(),isRead = False)
-		# messageRead.put()
-  #   	f_signAsRead(users.get_current_user(),messageRead)
-  		#self.response.write(user_key)
+    	pass
+    # 	#self.redirect("/redirect",permanent=True)
+    # 	url = "http://www.google.com/"
+	  	# response = urllib2.urlopen(url)
+
+    # 	if response.code == 200:
+	   #      html = response.read()
+	   #      self.response.out.write(html)
+    # 	else:
+    # 		pass
+    #     # handle
+
+    # 	response.close()
 
 # UserLogin action
 class UserLogin(webapp2.RequestHandler):
@@ -338,7 +370,9 @@ class LeaveChannel(webapp2.RequestHandler):
 
 		self.response.write(m.to_JSON())
 
-
+class Redirect(webapp2.RequestHandler):
+	def get(self):
+		self.response.write('hey')
 
 # function for adding data for table
 
@@ -426,6 +460,28 @@ def f_getNumOfClient(chan_id):
 	pass
 
 
+# Function that converts virables to JSON
+
+# Converts channelid to json
+def f_channel_id_JSOM(channel_id):
+	c = Channel_id_JSON(channel_id)
+	return c.to_JSON()
+
+# Converts channel to JSON
+def f_channel_JSOM(channel_id,name,icon):
+	c = Channel_JSON(channel_id,name,icon)
+	return c.to_JSON()
+
+# Converts message to JSON
+def f_message_JSON(channel,text,longtitude,latitude):
+	m = Message_Json(channel,text,longtitude,latitude)
+	return c.to_JSON()
+
+# Converts server to JSON
+def f_server_JSON(link):
+	s = Server_JSON(link)
+	return s.to_JSON()
+
 		
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
@@ -440,6 +496,7 @@ app = webapp2.WSGIApplication([
     ('/joinChannel',JoinChannel),
     ('/leaveChannel',LeaveChannel),
     ('/update',Update),
-    ('/sendMessage',SendMessage)
+    ('/sendMessage',SendMessage),
+    ('/redirect',Redirect)
 
 ], debug=True)
