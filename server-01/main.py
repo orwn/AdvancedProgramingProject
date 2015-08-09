@@ -127,7 +127,7 @@ class Server(ndb.Model):
 # Class invert message to JSON
 class R_Msg():
 	def __init__(self,status,message):
-		self.status = status
+		self.status = int(status)
 		self.message = message
 
 	def to_JSON(self):
