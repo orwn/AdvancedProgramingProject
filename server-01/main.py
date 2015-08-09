@@ -24,6 +24,16 @@ from google.appengine.api import users
 from datetime import datetime
 
 
+
+ACTION_JOIN_CHANNEL =5 
+ACTION_ADD_CHANNEL = 4
+ACTION_SEND_MESSAGE = 3 
+ACTION_LEAVE_CHANNEL = 6
+ACTION_LOGIN_CHANNEL = 1
+ACTION_DELETE_CHANNEL = 7
+ACTION_LOGOFF_CHANNEL = 2
+
+MY_LINK = "fasdS"
 # ...
 
 # Class of message
@@ -157,23 +167,7 @@ class Unregister(webapp2.RequestHandler):
 # Main Handler (debugging)
 class MainHandler(webapp2.RequestHandler):
     def get(self):
-   		url = 'http://localhost:12100/'
-   		name = "lalalal"
-		form_fields = {
-		  "first_name": name,
-		  "last_name": "Johnson",
-		  "email_address": "Albert.Johnson@example.com"
-		}
-		form_data = urllib.urlencode(form_fields)
-		result = urlfetch.fetch(url=url,
-		    payload=form_data,
-		    method=urlfetch.POST,
-		    headers={'Content-Type': 'application/x-www-form-urlencoded'})
-
-		self.response.write('result:')
-		self.response.write(result)
-		
- 		self.response.write(result.content)
+    	pass
 
 # UserLogin action
 class UserLogin(webapp2.RequestHandler):
@@ -193,6 +187,15 @@ class UserLogin(webapp2.RequestHandler):
         if user:
         	self.response.out.write('user')
        		f_addUser(user.nickname(),link = user.nickname())
+       		f_update_all(user.nickname(),ACTION_LOGIN_CHANNEL,f_server_JSOM(MY_LINK))
+       		m = R_Msg('1','Succeeded')
+       	else:
+       		m = R_Msg('0','failed')
+	   		
+   			
+			
+		
+		self.response.out.write('<html><body>%s</body></html>' % greeting)
 
 # SaveUser action
 class SaveUser(webapp2.RequestHandler):
@@ -203,7 +206,9 @@ class SaveUser(webapp2.RequestHandler):
 			# Creating user instance
 			user = User(id = user.nickname(),nickname = user.nickname(),link=user.nickname())
 			# Save in the user table
-			user.put();
+			user.put()
+
+
 			# Responding
 			m = R_Msg('1','Succeeded')
 			self.response.write(m.to_JSON())
@@ -226,9 +231,14 @@ class UserLogof(webapp2.RequestHandler):
 			# Logging out
 			self.redirect(users.create_logout_url(self.request.uri))
 			
+			# Updating other servers
+			f_update_all(user.nickname(),ACTION_LOGOFF_CHANNEL,f_server_JSOM(MY_LINK))
+
 			# Sending response
 			m = R_Msg('1','')
+
 			self.response.write(m.to_JSON())
+
 			
 		else:
 			# Responding for error
@@ -294,6 +304,7 @@ class Update(webapp2.RequestHandler):
 		elif(action == 7):
 			f_delChannl(data_arr['channel_id'])
 			
+		f_update_all(user_name,action,data)
 		m = R_Msg('1','')
 		self.response.write(m.to_JSON())
 
@@ -304,10 +315,22 @@ class AddChannel(webapp2.RequestHandler):
 		name = self.request.get('name')
 		channel_id = self.request.get('id')
 		icon = self.request.get('icon')
+		user = users.get_current_user()
+		# If the user is in
+		if user:
+			if f_isChannelExist(channel_id):
+				m = R_Msg('0','Channel Already Exists')
 
-		f_addChannel(channel_id,name,icon,True)
+			else:
+				f_addChannel(channel_id,name,icon,True)
+				f_update_all(user.nickname(),ACTION_ADD_CHANNEL,f_channel_JSOM(channel_id,name,icon))
+				f_addChannelUser(user.nickname(),channel_id)
+				f_update_all(user.nickname(),ACTION_JOIN_CHANNEL,f_channel_id_JSOM(channel_id))
+				m = R_Msg('1','')
+				
+		else:
+			m = R_Msg('0','User is disconnected')
 
-		m = R_Msg('1','')
 		self.response.write(m.to_JSON())
 
 class JoinChannel(webapp2.RequestHandler):
@@ -321,6 +344,7 @@ class JoinChannel(webapp2.RequestHandler):
 	
 			if f_isChannelExist(channel_id):
 				f_addChannelUser(user.nickname(),channel_id)
+				f_update_all(user.nickname(),ACTION_JOIN_CHANNEL,f_channel_id_JSOM(channel_id))
 				m = R_Msg('1','')
 			else:
 				m = R_Msg('0','Channel does not exist')
@@ -345,6 +369,8 @@ class SendMessage(webapp2.RequestHandler):
 				f_addMessage(user.nickname(),channel_id,text,longtitude,latitude)
 
 				m = R_Msg('1','')
+
+				f_update_all(user.nickname(),ACTION_SEND_MESSAGE,f_message_JSON(channel_id,text,latitude))
 			else:
 				m = R_Msg('0','Channel does not exist')
 		else:
@@ -363,7 +389,10 @@ class LeaveChannel(webapp2.RequestHandler):
 					f_delChannelUser(user.nickname(),channel_id)
 					if f_getNumOfClient == 0:
 						f_delChannl(channel_id)
+						f_update_all(user.nickname(),ACTION_DELETE_CHANNEL,f_channel_id_JSOM(channel_id))
+					
 					m = R_Msg('1','')
+					f_update_all(user.nickname(),ACTION_LEAVE_CHANNEL,f_channel_id_JSOM(channel_id))
 
 				else:
 					m = R_Msg('0','User does not belong to channel')
@@ -497,10 +526,11 @@ def f_update(url,user,action,data):
 	  "data": data
 	}
 	form_data = urllib.urlencode(form_fields)
-	result = urlfetch.fetch(url=url,
+	result = urlfetch.fetch(url=url+'update',
 	    payload=form_data,
 	    method=urlfetch.POST,
 	    headers={'Content-Type': 'application/x-www-form-urlencoded'})
+
 
 def f_update_all(user,action,data):
 	query = ndb.gql("""SELECT * FROM Server""")
