@@ -34,6 +34,10 @@ ACTION_DELETE_CHANNEL = 7
 ACTION_LOGOFF_CHANNEL = 2
 
 MY_LINK = "fasdS"
+
+
+METHOD_POST = urlfetch.POST
+METHOD_GET = urlfetch.GET
 # ...
 
 # Class of message
@@ -105,6 +109,20 @@ class Channels(ndb.Model):
 		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
 
 
+# Class that inverts list of channel to JSON
+class Messages(ndb.Model):
+	def __init__(self, messages):
+		self.messages = messages
+	def to_JSON(self):
+		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
+
+class Servers(ndb.Model):
+	def __init__(self, servers):
+		self.servers = servers
+	def to_JSON(self):
+		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
+
+
 # Class represents message the the data base
 class Message(ndb.Model):
 	user = ndb.KeyProperty(kind = User) 
@@ -170,24 +188,25 @@ class MainHandler(webapp2.RequestHandler):
     	pass
 
 # UserLogin action
-class UserLogin(webapp2.RequestHandler):
+class UserBLogin(webapp2.RequestHandler):
     def get(self):
     	# gets the current user
         user = users.get_current_user()
         if user:
             greeting = ('Welcome, %s! (<a href="%s">sign out</a>)' %
                         (user.nickname(), users.create_logout_url('/')))
+            self.response.out.write('<html><body>%s</body></html>' % greeting)
         else:
         	# sign in for debuggin through browser
             greeting = ('<a href="%s">Sign in or register</a>.' %
                         users.create_login_url('/'))
 
-        self.response.out.write('<html><body>%s</body></html>' % greeting)
+        #self.response.out.write('<html><body>%s</body></html>' % greeting)
         user = users.get_current_user()
         if user:
         	self.response.out.write('user')
        		f_addUser(user.nickname(),link = user.nickname())
-       		f_update_all(user.nickname(),ACTION_LOGIN_CHANNEL,f_server_JSOM(MY_LINK))
+       		f_update_all(user.nickname(),ACTION_LOGIN_CHANNEL,f_server_JSON(MY_LINK))
        		m = R_Msg('1','Succeeded')
        	else:
        		m = R_Msg('0','failed')
@@ -197,6 +216,21 @@ class UserLogin(webapp2.RequestHandler):
 		
 		self.response.out.write('<html><body>%s</body></html>' % greeting)
 
+
+class UserLogin(webapp2.RequestHandler):
+    def get(self):
+    	user = users.get_current_user()
+        if user:
+        	if f_isUserExist(user.nickname()):
+        		m = R_Msg('1','')
+    			self.response.write(user.nickname())
+        	else:
+        		m = R_Msg('0','User Already log in')
+       	else:
+       		m = R_Msg('0','There is no google user API and Meydan is temble')
+
+       	self.response.write(m.to_JSON())
+ 
 # SaveUser action
 class SaveUser(webapp2.RequestHandler):
 	def get(self):
@@ -232,7 +266,7 @@ class UserLogof(webapp2.RequestHandler):
 			self.redirect(users.create_logout_url(self.request.uri))
 			
 			# Updating other servers
-			f_update_all(user.nickname(),ACTION_LOGOFF_CHANNEL,f_server_JSOM(MY_LINK))
+			f_update_all(user.nickname(),ACTION_LOGOFF_CHANNEL,f_server_JSON(MY_LINK))
 
 			# Sending response
 			m = R_Msg('1','')
@@ -250,11 +284,11 @@ class UserLogof(webapp2.RequestHandler):
 class GetMyChannels(webapp2.RequestHandler):
 	def get(self):
 		# Select all the channels from the channel table
-		query = ndb.gql("""SELECT * FROM Channel""")
+		query = ndb.gql("""SELECT * FROM Channel WHERE isMine = True""")
 		channels = []
 		# For each channel adding it to a channel array
 		for channel in query:
-			channel.append(Channel_JSON(name = channel.name,icon = channel.icon , channel_id = channel.channel_id))
+			channels.append(Channel_JSON(name = channel.name,icon = channel.icon , channel_id = channel.channel_id))
 
 		# Convert to JSON and sent it as a responde
 		chans = Channels(channels)
@@ -286,22 +320,22 @@ class Update(webapp2.RequestHandler):
 		#self.response.write(data_arr['server'])
 
 		# Doiung the currect action
-		if(action == 1):
+		if(action == 1 and not (f_isUserExist(user))):
 			f_addUser(user_name,data_arr['server'])
-		elif(action == 2):
+		elif(action == 2 and f_isUserExist(user)):
 			f_delUser(user_name)
 		elif(action == 3):
 			f_addMessage(user_name,data_arr['channel'],data_arr['text'],data_arr['longtitude'],latitude=data_arr['latitude'])
-		elif(action == 4):
+		elif(action == 4 and f_isChannelExist(data_arr['channel_id'])):
 			f_addChannel(data_arr['channel_id'],data_arr['name'],data_arr['icon'],False)
 		
-		elif(action == 5):
+		elif(action == 5 and not (f_isChannelUserExist(data_arr['channel_id'],user_name))):
 			f_addChannelUser(user_name,data_arr['channel_id'])
 			
-		elif(action == 6):
+		elif(action == 6 and f_isChannelUserExist(data_arr['channel_id'],user_name)):
 			f_delChannelUser(user_name,data_arr['channel_id'])
 			
-		elif(action == 7):
+		elif(action == 7 and not (f_isChannelUserExist)):
 			f_delChannl(data_arr['channel_id'])
 			
 		f_update_all(user_name,action,data)
@@ -409,6 +443,52 @@ class Redirect(webapp2.RequestHandler):
 	def get(self):
 		self.response.write('hey')
 
+class GetServers(webapp2.RequestHandler):
+	def get(self):
+		# Select all the channels from the channel table
+		query = ndb.gql("""SELECT * FROM Server""")
+		servers = []
+		# For each channel adding it to a channel array
+		for s in query:
+			servers.append(Server_JSON(server = s.link))
+
+		# Convert to JSON and sent it as a responde
+		srvs = Servers(servers)
+		self.response.out.write(srvs.to_JSON())
+		
+		# Asking our 3 known servers
+		# form_fields = {	}
+		# query = ndb.gql("""SELECT * FROM Server""")
+		# dic = dict()
+		# dic['servers'] = []
+		# for s in query:
+		# 	# Unions servers list
+		# 	result = f_send_request(s.link,"getServers",form_fields,METHOD_GET)
+		# 	dic1 = json.loads(str(result))
+		# 	dic = f_union_dict_list(dic,dic1)
+			
+			
+		
+		#self.response.write(json.dumps(str(dic)))
+
+
+class GetChannels(webapp2.RequestHandler):
+	def get(self):
+		# Select all the channels from the channel table
+		query = ndb.gql("""SELECT * FROM Channel""")
+		channels = []
+		# For each channel adding it to a channel array
+		for channel in query:
+			channels.append(Channel_JSON(name = channel.name,icon = channel.icon , channel_id = channel.channel_id))
+
+		# Convert to JSON and sent it as a responde
+		chans = Channels(channels)
+		self.response.out.write(chans.to_JSON())
+
+
+class GetUpdates(webapp2.RequestHandler):
+	def get(self):
+		pass
 # function for adding data for table
 
 # Add user
@@ -463,11 +543,21 @@ def f_isChannelUserExist(channel_id,user_name):
 	query = ndb.gql("""SELECT * FROM ChannelUser""")
 	count = 0
 	for channelUser in query:
-		if channelUser.channel.get().channel_id == chan_id and channelUser.user.get().name == user_name:
+		if channelUser.channel.get().channel_id == channel_id and channelUser.user.get().name == user_name:
 			count = count+1
+
+	return count>0
 
 def f_isChannelExist(channel_id):
 	query = ndb.gql("""SELECT * FROM Channel WHERE channel_id = :channel_id """,channel_id = channel_id)
+	return query.count()>0
+
+def f_isUserExist(user_name):
+	query = ndb.gql("""SELECT * FROM User WHERE nickname = :name """,name = user_name)
+	return query.count()>0
+
+def f_isMessageExists(channel,text,longtitude,latitude):
+	query = ndb.gql("""SELECT * FROM Message WHERE text = :text and longtitude = :longtitude and latitude = :latitude """,text = text,longtitude=longtitude,latitude = latitude)
 	return query.count()>0
 
 def f_addMessageRead(message,user,isRead):
@@ -519,7 +609,7 @@ def f_server_JSON(link):
 
 
 def f_update(url,user,action,data):
-	url = 'http://localhost:12100/'
+	#url = 'http://localhost:12100/'
 	form_fields = {
 	  "user": user,
 	  "action": action,
@@ -538,12 +628,38 @@ def f_update_all(user,action,data):
 		f_update(s.link,user,action,data)
 
 
+def f_send_request(url,suffix,form_fields,method):
+	form_data = urllib.urlencode(form_fields)
+	result = urlfetch.fetch(url=url+suffix, 
+		payload=form_data,
+	    method=method,
+	    headers={'Content-Type': 'application/x-www-form-urlencoded'})
 
+	return result.content
+
+def f_sent_all_request_and_union(suffix,form_fields,method):
+	query = ndb.gql("""SELECT * FROM Server""")
+	for s in query:
+		pass
+
+
+
+
+
+# Union 2 dictionary compused from lists
+def f_union_dict_list(dic1,dic2):
+	dic = dict()
+	for name,age in dic1.items():
+	    name = str(name)
+	    dic[name] = list(set(dic1[name]).union(set(dic2[name])))	
+
+	return dic	
 		
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/register',Register),
     ('/unRegister',Unregister),
+    ('/blogin',UserBLogin),
     ('/login',UserLogin),
     ('/logoff',UserLogof),
     ('/saveuserindatabase',SaveUser),
@@ -554,6 +670,9 @@ app = webapp2.WSGIApplication([
     ('/leaveChannel',LeaveChannel),
     ('/update',Update),
     ('/sendMessage',SendMessage),
-    ('/redirect',Redirect)
+    ('/redirect',Redirect),
+    ('/getServers',GetServers),
+    ('/getChannels',GetChannels),
+    ('/getUpdates',GetUpdates)
 
 ], debug=True)
