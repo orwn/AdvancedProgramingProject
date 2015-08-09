@@ -22,6 +22,8 @@ from google.appengine.api import urlfetch
 from google.appengine.ext import ndb 
 from google.appengine.api import users
 from datetime import datetime
+
+
 # ...
 
 # Class of message
@@ -155,19 +157,23 @@ class Unregister(webapp2.RequestHandler):
 # Main Handler (debugging)
 class MainHandler(webapp2.RequestHandler):
     def get(self):
-    	pass
-    # 	#self.redirect("/redirect",permanent=True)
-    # 	url = "http://www.google.com/"
-	  	# response = urllib2.urlopen(url)
+   		url = 'http://localhost:12100/'
+   		name = "lalalal"
+		form_fields = {
+		  "first_name": name,
+		  "last_name": "Johnson",
+		  "email_address": "Albert.Johnson@example.com"
+		}
+		form_data = urllib.urlencode(form_fields)
+		result = urlfetch.fetch(url=url,
+		    payload=form_data,
+		    method=urlfetch.POST,
+		    headers={'Content-Type': 'application/x-www-form-urlencoded'})
 
-    # 	if response.code == 200:
-	   #      html = response.read()
-	   #      self.response.out.write(html)
-    # 	else:
-    # 		pass
-    #     # handle
-
-    # 	response.close()
+		self.response.write('result:')
+		self.response.write(result)
+		
+ 		self.response.write(result.content)
 
 # UserLogin action
 class UserLogin(webapp2.RequestHandler):
@@ -481,6 +487,27 @@ def f_message_JSON(channel,text,longtitude,latitude):
 def f_server_JSON(link):
 	s = Server_JSON(link)
 	return s.to_JSON()
+
+
+def f_update(url,user,action,data):
+	url = 'http://localhost:12100/'
+	form_fields = {
+	  "user": user,
+	  "action": action,
+	  "data": data
+	}
+	form_data = urllib.urlencode(form_fields)
+	result = urlfetch.fetch(url=url,
+	    payload=form_data,
+	    method=urlfetch.POST,
+	    headers={'Content-Type': 'application/x-www-form-urlencoded'})
+
+def f_update_all(user,action,data):
+	query = ndb.gql("""SELECT * FROM Server""")
+	for s in query:
+		f_update(s.link,user,action,data)
+
+
 
 		
 app = webapp2.WSGIApplication([
