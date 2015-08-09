@@ -186,6 +186,7 @@ class Unregister(webapp2.RequestHandler):
 class MainHandler(webapp2.RequestHandler):
     def get(self):
     	pass
+		
 
 # UserLogin action
 class UserBLogin(webapp2.RequestHandler):
@@ -377,9 +378,12 @@ class JoinChannel(webapp2.RequestHandler):
 			channel_key = ndb.Key('Channel',channel_id)
 	
 			if f_isChannelExist(channel_id):
-				f_addChannelUser(user.nickname(),channel_id)
-				f_update_all(user.nickname(),ACTION_JOIN_CHANNEL,f_channel_id_JSOM(channel_id))
-				m = R_Msg('1','')
+				if not(f_isChannelUserExist(channel_id,user.nickname())):
+					f_addChannelUser(user.nickname(),channel_id)
+					f_update_all(user.nickname(),ACTION_JOIN_CHANNEL,f_channel_id_JSOM(channel_id))
+					m = R_Msg('1','')
+				else:
+					m = R_Msg('0','User is Already in the Channel')
 			else:
 				m = R_Msg('0','Channel does not exist')
 
@@ -543,7 +547,7 @@ def f_isChannelUserExist(channel_id,user_name):
 	query = ndb.gql("""SELECT * FROM ChannelUser""")
 	count = 0
 	for channelUser in query:
-		if channelUser.channel.get().channel_id == channel_id and channelUser.user.get().name == user_name:
+		if channelUser.channel.get().channel_id == channel_id and channelUser.user.id() == user_name:
 			count = count+1
 
 	return count>0
