@@ -34,7 +34,7 @@ ACTION_DELETE_CHANNEL = 7
 ACTION_LOGOFF_CHANNEL = 2
 
 # Saves my server link
-MY_LINK = "http://ap-server.appspot.com/"
+MY_LINK = "http://ap-server.appspot.com"
 
 # Methods
 METHOD_POST = urlfetch.POST
@@ -127,7 +127,7 @@ class Channels(ndb.Model):
 class Messages(ndb.Model):
 	def __init__(self, messages,link):
 		self.messages = messages
-		self.link = link
+		self.change_server = link
 	def to_JSON(self):
 		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
 
@@ -246,7 +246,7 @@ class UserLogin(webapp2.RequestHandler):
         		f_addUser(user.nickname(),link = MY_LINK)
        			f_update_all(user.nickname(),ACTION_LOGIN_CHANNEL,f_server_JSON(MY_LINK))
         		m = R_Msg('1','')
-    			self.response.write(user.nickname())
+    			
         	else:
         		m = R_Msg('0','User Already log in')
        	else:
@@ -334,18 +334,21 @@ class Update(webapp2.RequestHandler):
 		action = int(self.request.get('action'))
 		data = self.request.get('data')
 		# Writs the data (debugging)
-		self.response.write(data)
+		
+		
 		data_arr = json.loads(data)
+
+		
 		flag = 0
 
 		# Doing the right action while avoiding infinte loops
 		# Becouse of the recursice update
-		if(action == 1 and not (f_isUserExist(user))):
+		if(action == 1 and not (f_isUserExist(user_name))):
 			# Adding user
 			f_addUser(user_name,data_arr['server'])
 			flag = 1
 
-		elif(action == 2 and f_isUserExist(user)):
+		elif(action == 2 and f_isUserExist(user_name)):
 			# Deleting user
 			f_delUser(user_name)
 			flag = 1
@@ -750,7 +753,7 @@ def f_update_all(user,action,data):
 # sent a request
 def f_send_request(url,suffix,form_fields,method):
 	form_data = urllib.urlencode(form_fields)
-	result = urlfetch.fetch(url=url+suffix, 
+	result = urlfetch.fetch(url=url+'/'+suffix, 
 		payload=form_data,
 	    method=method,
 	    headers={'Content-Type': 'application/x-www-form-urlencoded'})
