@@ -92,6 +92,19 @@ class Message_Json:
 	def to_JSON(self):
 		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
 
+
+# This class converts message to json
+class Message_User_Json:
+	def __init__(self,channel_id,user_id,text,longtitude,latitude):
+		self.channel_id = channel_id
+		self.user_id = user_id
+		self.text = text
+		self.longtitude = longtitude
+		self.latitude = latitude
+
+	def to_JSON(self):
+		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
+
 # This class converts server to json
 class Server_JSON:
 	def __init__(self,server):
@@ -111,8 +124,9 @@ class Channels(ndb.Model):
 
 # Class that inverts list of channel to JSON
 class Messages(ndb.Model):
-	def __init__(self, messages):
+	def __init__(self, messages,link):
 		self.messages = messages
+		self.link = link
 	def to_JSON(self):
 		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
 
@@ -206,7 +220,7 @@ class UserBLogin(webapp2.RequestHandler):
         user = users.get_current_user()
         if user:
         	self.response.out.write('user')
-       		f_addUser(user.nickname(),link = user.nickname())
+       		f_addUser(user.nickname(),link = MY_LINK)
        		f_update_all(user.nickname(),ACTION_LOGIN_CHANNEL,f_server_JSON(MY_LINK))
        		m = R_Msg('1','Succeeded')
        	else:
@@ -239,7 +253,7 @@ class SaveUser(webapp2.RequestHandler):
 		user = users.get_current_user()
 		if user:
 			# Creating user instance
-			user = User(id = user.nickname(),nickname = user.nickname(),link=user.nickname())
+			user = User(id = user.nickname(),nickname = user.nickname(),link=MY_LINK)
 			# Save in the user table
 			user.put()
 
@@ -264,7 +278,7 @@ class UserLogof(webapp2.RequestHandler):
 			key.delete()
 
 			# Logging out
-			self.redirect(users.create_logout_url(self.request.uri))
+			#self.redirect(users.create_logout_url(self.request.uri))
 			
 			# Updating other servers
 			f_update_all(user.nickname(),ACTION_LOGOFF_CHANNEL,f_server_JSON(MY_LINK))
@@ -277,7 +291,7 @@ class UserLogof(webapp2.RequestHandler):
 			
 		else:
 			# Responding for error
-			m = R_Msg('1','User not exist')
+			m = R_Msg('0','User not exist')
 			self.response.write(m.to_JSON())
 
 
@@ -408,7 +422,7 @@ class SendMessage(webapp2.RequestHandler):
 
 				m = R_Msg('1','')
 
-				f_update_all(user.nickname(),ACTION_SEND_MESSAGE,f_message_JSON(channel_id,text,latitude))
+				f_update_all(user.nickname(),ACTION_SEND_MESSAGE,f_message_JSON(channel_id,text,latitude,latitude))
 			else:
 				m = R_Msg('0','Channel does not exist')
 		else:
@@ -492,7 +506,30 @@ class GetChannels(webapp2.RequestHandler):
 
 class GetUpdates(webapp2.RequestHandler):
 	def get(self):
-		pass
+		user = users.get_current_user()
+		if user:
+			key = ndb.Key('User', user.nickname()) 
+			if f_isUserExist(user.nickname()):
+				# Select all the Messages from the messages table
+				query = ndb.gql("""SELECT * FROM Message""")
+				messages = []
+				# For each channel adding it to a channel array
+				for m in query:
+					if m.datetime > key.get().lastSeen:
+						messages.append(Message_User_Json(m.channel.get().channel_id,m.user.id(),m.text,m.longtitude,m.latitude))
+
+				# Convert to JSON and sent it as a responde
+				key.get().lastSeen = datetime.now()
+				key.get().put()
+				mss = Messages(messages,MY_LINK)
+				
+			else:
+				mss = R_Msg('0','User is disconnected!')
+		else:
+			mss = R_Msg('0','User is disconnected!')
+
+		self.response.out.write(mss.to_JSON())
+
 # function for adding data for table
 
 # Add user
@@ -604,7 +641,7 @@ def f_channel_JSOM(channel_id,name,icon):
 # Converts message to JSON
 def f_message_JSON(channel,text,longtitude,latitude):
 	m = Message_Json(channel,text,longtitude,latitude)
-	return c.to_JSON()
+	return m.to_JSON()
 
 # Converts server to JSON
 def f_server_JSON(link):
