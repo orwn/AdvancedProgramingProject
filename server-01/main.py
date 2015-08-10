@@ -172,30 +172,33 @@ class Register(webapp2.RequestHandler):
 		# Selects all of the servers
 		query = ndb.gql("""SELECT * FROM Server""")
 		# If there are more than 3 servers
-		if query.count()>3:
-			m = R_Msg('0','Full')
-			self.response.write(m.to_JSON())
-			pass
+		
+		if query.count()>=3:
+			m = R_Msg(0,'Full')
 		# Less than 3 servers
 		else:
-			server = Server(id = self.request.get('link'),link = self.request.get('link'))
-			server.put()
-			m = R_Msg('1','')
-			self.response.write(m.to_JSON())
+			key = ndb.Key('Server', self.request.get('link'))
+	        if key.get() is None:
+	        	server = Server(id = self.request.get('link'),link = self.request.get('link'))
+	        	server.put()
+	        	m = R_Msg(1,'')
+	        else:
+	        	m = R_Msg(0,'Already Linked')           
+	   	self.response.write("m.to_JSON()")
 
-			# Writing the links for debugging
-			for link in query:
-				self.response.write(link)
-				self.response.write('\n')
 
+	
 # Unregister action
 class Unregister(webapp2.RequestHandler):
-	def post(self):
-		# deleting the show from ther server table
-		key = ndb.Key('Server', self.request.get('link')) 
-		key.delete()
-		m = R_Msg('1','')
-		self.response.write(m.to_JSON())
+	def post(self):	
+		# deleting the show from the server table
+		key = ndb.Key('Server', self.request.get('link'))
+		if key.get() is None:
+			m = R_Msg(0,'Not Linked')
+		else:
+			key.delete()
+			m = R_Msg(1,"")
+		self.response.write(m.to_JSON())		
 			
 # Main Handler (debugging)
 class MainHandler(webapp2.RequestHandler):
