@@ -24,7 +24,7 @@ from google.appengine.api import users
 from datetime import datetime
 
 
-
+# Consts for the update method
 ACTION_JOIN_CHANNEL =5 
 ACTION_ADD_CHANNEL = 4
 ACTION_SEND_MESSAGE = 3 
@@ -33,21 +33,22 @@ ACTION_LOGIN_CHANNEL = 1
 ACTION_DELETE_CHANNEL = 7
 ACTION_LOGOFF_CHANNEL = 2
 
+# Saves my server link
 MY_LINK = "fasdS"
 
-
+# Methods
 METHOD_POST = urlfetch.POST
 METHOD_GET = urlfetch.GET
-# ...
 
-# Class of message
+
+
 
 # Class Represents user in the data base
 class User(ndb.Model):
 	nickname = ndb.StringProperty()
 	link = ndb.StringProperty()
 	lastSeen = ndb.DateTimeProperty()
-	#mail = ndb.StringProperty()
+	
 
 	
 # Class represents channel in the data base
@@ -81,7 +82,7 @@ class Channel_id_JSON:
 	def to_JSON(self):
 		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
 
-# This class converts message to json
+# This class converts message to json without the sender
 class Message_Json:
 	def __init__(self,channel,text,longtitude,latitude):
 		self.channel = channel
@@ -93,7 +94,7 @@ class Message_Json:
 		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
 
 
-# This class converts message to json
+# This class converts message to json with the sender
 class Message_User_Json:
 	def __init__(self,channel_id,user_id,text,longtitude,latitude):
 		self.channel_id = channel_id
@@ -156,7 +157,7 @@ class MessageRead(ndb.Model):
 class Server(ndb.Model):
 	link = ndb.StringProperty()
 
-# Class invert message to JSON
+# Class that converts responces to JSON
 class R_Msg():
 	def __init__(self,status,message):
 		self.status = int(status)
@@ -202,7 +203,7 @@ class MainHandler(webapp2.RequestHandler):
     	pass
 		
 
-# UserLogin action
+# UserLogin action - login thorugh browser == debugging
 class UserBLogin(webapp2.RequestHandler):
     def get(self):
     	# gets the current user
@@ -231,11 +232,13 @@ class UserBLogin(webapp2.RequestHandler):
 		
 		self.response.out.write('<html><body>%s</body></html>' % greeting)
 
-
+# Login function
 class UserLogin(webapp2.RequestHandler):
     def get(self):
+    	# Check if the user exist
     	user = users.get_current_user()
         if user:
+        	# check if the user already in the system
         	if f_isUserExist(user.nickname()):
         		m = R_Msg('1','')
     			self.response.write(user.nickname())
@@ -246,7 +249,7 @@ class UserLogin(webapp2.RequestHandler):
 
        	self.response.write(m.to_JSON())
  
-# SaveUser action
+# SaveUser action - for debugging
 class SaveUser(webapp2.RequestHandler):
 	def get(self):
 		# getting the currect user
@@ -268,23 +271,25 @@ class SaveUser(webapp2.RequestHandler):
 			self.response.write(m.to_JSON())
 
 # UserLogOf action
-class UserLogof(webapp2.RequestHandler):
+class UserLogoff(webapp2.RequestHandler):
 	def get(self):
 		user = users.get_current_user()
 		# If the user is in
 		if user:
-			# Deleting from the user table
-			key = ndb.Key('User', user.nickname()) 
-			key.delete()
-
-			# Logging out
+			# Checking if the user is in the system
+			if f_isUserExist(user.nickname()):
+				# Deleting from the user table
+				key = ndb.Key('User', user.nickname()) 
+				key.delete()
+				# Updating all
+				f_update_all(user.nickname(),ACTION_LOGOFF_CHANNEL,f_server_JSON(MY_LINK))
+				m = R_Msg('1','')
+			else:
+				# The user is not log int
+				m = R_Msg('0','The user is not logged in')
 			#self.redirect(users.create_logout_url(self.request.uri))
-			
-			# Updating other servers
-			f_update_all(user.nickname(),ACTION_LOGOFF_CHANNEL,f_server_JSON(MY_LINK))
-
 			# Sending response
-			m = R_Msg('1','')
+			
 
 			self.response.write(m.to_JSON())
 
@@ -298,7 +303,7 @@ class UserLogof(webapp2.RequestHandler):
 # GetMyChannels action
 class GetMyChannels(webapp2.RequestHandler):
 	def get(self):
-		# Select all the channels from the channel table
+		# Select all the channels from the channel table where they are old by me
 		query = ndb.gql("""SELECT * FROM Channel WHERE isMine = True""")
 		channels = []
 		# For each channel adding it to a channel array
@@ -312,14 +317,8 @@ class GetMyChannels(webapp2.RequestHandler):
 # GetNUmOfClients action
 class GetNumOfClients(webapp2.RequestHandler):
 	def post(self):
+		# Note if chanel does not exist returns 0
 		channel_id = self.request.get('id')
-		# Checking if channel exists 
-		
-		# Selecting the chanek user when the chanel equals to the chanel name
-
-		#self.response.out.write(key.get())
-	
-		# Respinding the count
 		self.response.out.write(f_getNumOfClient(channel_id))
 
 # Update action
@@ -332,32 +331,55 @@ class Update(webapp2.RequestHandler):
 		# Writs the data (debugging)
 		self.response.write(data)
 		data_arr = json.loads(data)
-		#self.response.write(data_arr['server'])
+		flag = 0
 
-		# Doiung the currect action
+		# Doing the right action while avoiding infinte loops
+		# Becouse of the recursice update
 		if(action == 1 and not (f_isUserExist(user))):
+			# Adding user
 			f_addUser(user_name,data_arr['server'])
+			flag = 1
+
 		elif(action == 2 and f_isUserExist(user)):
+			# Deleting user
 			f_delUser(user_name)
+			flag = 1
+
 		elif(action == 3):
+			# Adding a message to the Message table
 			f_addMessage(user_name,data_arr['channel'],data_arr['text'],data_arr['longtitude'],latitude=data_arr['latitude'])
+			flag = 1
+
 		elif(action == 4 and f_isChannelExist(data_arr['channel_id'])):
+			# Adding a channel to the channel table
 			f_addChannel(data_arr['channel_id'],data_arr['name'],data_arr['icon'],False)
+			flag = 1
 		
 		elif(action == 5 and not (f_isChannelUserExist(data_arr['channel_id'],user_name))):
+			# Adding channelUser to the channelUser table
 			f_addChannelUser(user_name,data_arr['channel_id'])
+			flag = 1
 			
 		elif(action == 6 and f_isChannelUserExist(data_arr['channel_id'],user_name)):
+			# Deleting channel user from the channel user table
 			f_delChannelUser(user_name,data_arr['channel_id'])
+			flag =1
 			
 		elif(action == 7 and not (f_isChannelUserExist)):
+			# Deleting Channel
 			f_delChannl(data_arr['channel_id'])
+			flag = 1
 			
-		f_update_all(user_name,action,data)
+		# If the flag is equal to 1 than we have changed something
+		if flag==1:
+			f_update_all(user_name,action,data)
+
+		# Writing response
 		m = R_Msg('1','')
 		self.response.write(m.to_JSON())
 
 
+# Adding channel action
 class AddChannel(webapp2.RequestHandler):
 	def post(self):
 		# Getting the user the action and the dat
@@ -365,47 +387,63 @@ class AddChannel(webapp2.RequestHandler):
 		channel_id = self.request.get('id')
 		icon = self.request.get('icon')
 		user = users.get_current_user()
-		# If the user is in
+		# If the user exists
 		if user:
-			if f_isChannelExist(channel_id):
-				m = R_Msg('0','Channel Already Exists')
+			# If the user loged in
+			if f_isUserExist(user.nickname()):
 
+				# If the channel is already exist
+				if f_isChannelExist(channel_id):
+					m = R_Msg('0','Channel Already Exists')
+
+				else:
+					# elce adding the channel
+					f_addChannel(channel_id,name,icon,True)
+					f_update_all(user.nickname(),ACTION_ADD_CHANNEL,f_channel_JSOM(channel_id,name,icon))
+					# Then adding the current user to the channel
+					f_addChannelUser(user.nickname(),channel_id)
+					f_update_all(user.nickname(),ACTION_JOIN_CHANNEL,f_channel_id_JSOM(channel_id))
+					m = R_Msg('1','')
 			else:
-				f_addChannel(channel_id,name,icon,True)
-				f_update_all(user.nickname(),ACTION_ADD_CHANNEL,f_channel_JSOM(channel_id,name,icon))
-				f_addChannelUser(user.nickname(),channel_id)
-				f_update_all(user.nickname(),ACTION_JOIN_CHANNEL,f_channel_id_JSOM(channel_id))
-				m = R_Msg('1','')
+				m = R_Msg('0','User is log off')
 				
 		else:
 			m = R_Msg('0','User is disconnected')
 
+		# Responsing
 		self.response.write(m.to_JSON())
 
+# Joining Channel
 class JoinChannel(webapp2.RequestHandler):
 	def post(self):
-		#pass
+		# Get the current user
 		user = users.get_current_user()
 		# If the user is in
 		if user:
 			channel_id = self.request.get('id')
 			channel_key = ndb.Key('Channel',channel_id)
-	
-			if f_isChannelExist(channel_id):
-				if not(f_isChannelUserExist(channel_id,user.nickname())):
-					f_addChannelUser(user.nickname(),channel_id)
-					f_update_all(user.nickname(),ACTION_JOIN_CHANNEL,f_channel_id_JSOM(channel_id))
-					m = R_Msg('1','')
+			if f_isUserExist(user.nickname()):
+
+				# Checking if channel exist
+				if f_isChannelExist(channel_id):
+					# Checing if the user already sign to the channel
+					if not(f_isChannelUserExist(channel_id,user.nickname())):
+						f_addChannelUser(user.nickname(),channel_id)
+						f_update_all(user.nickname(),ACTION_JOIN_CHANNEL,f_channel_id_JSOM(channel_id))
+						m = R_Msg('1','')
+					else:
+						m = R_Msg('0','User is Already in the Channel')
 				else:
-					m = R_Msg('0','User is Already in the Channel')
+					m = R_Msg('0','Channel does not exist')
 			else:
-				m = R_Msg('0','Channel does not exist')
+				m = R_Msg('0','User is disconnected')
 
 		else:
-			m = R_Msg('0','User is disconnected!')
+			m = R_Msg('0','User does not  exist!')
 		
 		self.response.write(m.to_JSON())
 
+# Sending message
 class SendMessage(webapp2.RequestHandler):
 	def post(self):
 		# Getting String channel_id, String text, Double longtitude, Double latitude
@@ -414,53 +452,84 @@ class SendMessage(webapp2.RequestHandler):
 		longtitude = self.request.get('longtitude')
 		latitude = self.request.get('latitude')
 
+		# Getting the currect user
 		user = users.get_current_user()
 		# If the user is in
 		if user:
-			if f_isChannelExist(channel_id):
-				f_addMessage(user.nickname(),channel_id,text,longtitude,latitude)
 
-				m = R_Msg('1','')
+			# If the user loged is
+			if f_isUserExist(user.nickname()):
 
-				f_update_all(user.nickname(),ACTION_SEND_MESSAGE,f_message_JSON(channel_id,text,latitude,latitude))
+				# If the channel exists
+				if f_isChannelExist(channel_id):
+					# Adding new message to the data base
+					f_addMessage(user.nickname(),channel_id,text,longtitude,latitude)
+
+					m = R_Msg('1','')
+
+					# Updating the other servers
+					f_update_all(user.nickname(),ACTION_SEND_MESSAGE,f_message_JSON(channel_id,text,latitude,latitude))
+				else:
+					m = R_Msg('0','Channel does not exist')
 			else:
-				m = R_Msg('0','Channel does not exist')
+				m = R_Msg('0','User is disconnected!')
 		else:
-			m = R_Msg('0','User is disconnected!')
+			m = R_Msg('0','User does not exist')
 
+		# Responsing
 		self.response.write(m.to_JSON())
 
-
+# Leaving Channel
 class LeaveChannel(webapp2.RequestHandler):
 	def post(self):
+		# Getting the currecnt user and the id request
 		channel_id = self.request.get('id')
 		user = users.get_current_user()
+		# if the user exists
 		if user:
-			if f_isChannelExist(channel_id):
-				if f_isChannelUserExist(channel_id,user.nickname()):
-					f_delChannelUser(user.nickname(),channel_id)
-					if f_getNumOfClient == 0:
-						f_delChannl(channel_id)
-						f_update_all(user.nickname(),ACTION_DELETE_CHANNEL,f_channel_id_JSOM(channel_id))
-					
-					m = R_Msg('1','')
-					f_update_all(user.nickname(),ACTION_LEAVE_CHANNEL,f_channel_id_JSOM(channel_id))
+			# If the user loged is
+			if f_isUserExist(user.nickname()):
 
+				# if the channel exists
+				if f_isChannelExist(channel_id):
+
+					# if the channel user exist
+					if f_isChannelUserExist(channel_id,user.nickname()):
+						# Deleting channel
+						f_delChannelUser(user.nickname(),channel_id)
+						# Updating others
+						f_update_all(user.nickname(),ACTION_LEAVE_CHANNEL,f_channel_id_JSOM(channel_id))
+						
+						# If the channel is empty now
+						if f_getNumOfClient == 0:
+							# Delete channel
+							f_delChannl(channel_id)
+							# Updating others
+							f_update_all(user.nickname(),ACTION_DELETE_CHANNEL,f_channel_id_JSOM(channel_id))
+						
+						m = R_Msg('1','')
+						
+
+					else:
+						m = R_Msg('0','User does not belong to channel')
+
+						
 				else:
-					m = R_Msg('0','User does not belong to channel')
-
-					
+					m = R_Msg('0','Channel does not exist')
 			else:
-				m = R_Msg('0','Channel does not exist')
+				m = R_Msg('0','User is disconnected!')
+		
 		else:
-			m = R_Msg('0','User is disconnected!')
+			m = R_Msg('0','User does not  exists!')
 
+		# Responsing
 		self.response.write(m.to_JSON())
 
 class Redirect(webapp2.RequestHandler):
 	def get(self):
 		self.response.write('hey')
 
+# Getting servers
 class GetServers(webapp2.RequestHandler):
 	def get(self):
 		# Select all the channels from the channel table
@@ -489,7 +558,7 @@ class GetServers(webapp2.RequestHandler):
 		
 		#self.response.write(json.dumps(str(dic)))
 
-
+# Getting chennls
 class GetChannels(webapp2.RequestHandler):
 	def get(self):
 		# Select all the channels from the channel table
@@ -503,12 +572,14 @@ class GetChannels(webapp2.RequestHandler):
 		chans = Channels(channels)
 		self.response.out.write(chans.to_JSON())
 
-
+# Gets updates
 class GetUpdates(webapp2.RequestHandler):
 	def get(self):
 		user = users.get_current_user()
+		# if the user exists
 		if user:
 			key = ndb.Key('User', user.nickname()) 
+			# Checking if the user loged in
 			if f_isUserExist(user.nickname()):
 				# Select all the Messages from the messages table
 				query = ndb.gql("""SELECT * FROM Message""")
@@ -528,6 +599,7 @@ class GetUpdates(webapp2.RequestHandler):
 		else:
 			mss = R_Msg('0','User is disconnected!')
 
+		# Responsing
 		self.response.out.write(mss.to_JSON())
 
 # function for adding data for table
@@ -648,7 +720,7 @@ def f_server_JSON(link):
 	s = Server_JSON(link)
 	return s.to_JSON()
 
-
+# Send an update to a specific server
 def f_update(url,user,action,data):
 	#url = 'http://localhost:12100/'
 	form_fields = {
@@ -657,18 +729,20 @@ def f_update(url,user,action,data):
 	  "data": data
 	}
 	form_data = urllib.urlencode(form_fields)
+	# sending
 	result = urlfetch.fetch(url=url+'update',
 	    payload=form_data,
 	    method=urlfetch.POST,
 	    headers={'Content-Type': 'application/x-www-form-urlencoded'})
 
 
+# Send an update to all servers
 def f_update_all(user,action,data):
 	query = ndb.gql("""SELECT * FROM Server""")
 	for s in query:
 		f_update(s.link,user,action,data)
 
-
+# sent a request
 def f_send_request(url,suffix,form_fields,method):
 	form_data = urllib.urlencode(form_fields)
 	result = urlfetch.fetch(url=url+suffix, 
@@ -682,9 +756,6 @@ def f_sent_all_request_and_union(suffix,form_fields,method):
 	query = ndb.gql("""SELECT * FROM Server""")
 	for s in query:
 		pass
-
-
-
 
 
 # Union 2 dictionary compused from lists
@@ -702,7 +773,7 @@ app = webapp2.WSGIApplication([
     ('/unRegister',Unregister),
     ('/blogin',UserBLogin),
     ('/login',UserLogin),
-    ('/logoff',UserLogof),
+    ('/logoff',UserLogoff),
     ('/saveuserindatabase',SaveUser),
     ('/getNumOfClients',GetNumOfClients),
     ('/getMyChannels', GetMyChannels),
