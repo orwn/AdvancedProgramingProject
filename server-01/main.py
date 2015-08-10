@@ -34,7 +34,7 @@ ACTION_DELETE_CHANNEL = 7
 ACTION_LOGOFF_CHANNEL = 2
 
 # Saves my server link
-MY_LINK = "fasdS"
+MY_LINK = "http://ap-server.appspot.com/"
 
 # Methods
 METHOD_POST = urlfetch.POST
@@ -184,7 +184,7 @@ class Register(webapp2.RequestHandler):
 	        	m = R_Msg(1,'')
 	        else:
 	        	m = R_Msg(0,'Already Linked')           
-	   	self.response.write("m.to_JSON()")
+	   	self.response.write(m.to_JSON())
 
 
 	
@@ -242,7 +242,9 @@ class UserLogin(webapp2.RequestHandler):
     	user = users.get_current_user()
         if user:
         	# check if the user already in the system
-        	if f_isUserExist(user.nickname()):
+        	if not f_isUserExist(user.nickname()):
+        		f_addUser(user.nickname(),link = MY_LINK)
+       			f_update_all(user.nickname(),ACTION_LOGIN_CHANNEL,f_server_JSON(MY_LINK))
         		m = R_Msg('1','')
     			self.response.write(user.nickname())
         	else:
