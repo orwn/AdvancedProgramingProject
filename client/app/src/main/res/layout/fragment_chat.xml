@@ -1,0 +1,18 @@
+<android.support.v4.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent" tools:context="com.example.orwn.ex4.Chat.ChatFragment"
+    android:id="@+id/chat_swipeLayout">
+
+
+    <ListView
+        android:id="@+id/lstChat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:dividerHeight="10dp"
+
+
+        android:divider="#cc0000"
+        style="@style/AppTheme"
+        android:background="#e6111111"></ListView>
+
+</android.support.v4.widget.SwipeRefreshLayout>

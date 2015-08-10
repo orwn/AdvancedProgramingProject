@@ -1,0 +1,104 @@
+<resources>
+    <string name="app_name">BAZINGA</string>
+    <string name="title_activity_splash">SplashActivity</string>
+
+
+    <string name="action_settings">הגדרות</string>
+
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    >
+    <string-array name="Friends_Names">
+
+        <item>חבר0</item>
+        <item>חבר1</item>
+        <item>חבר2</item>
+        <item>חבר3</item>
+        <item>חבר4</item>
+        <item>חבר5</item>
+        <item>חבר6</item>
+        <item>חבר7</item>
+        <item>חבר8</item>
+        <item>חבר9</item>
+        <item>חבר10</item>
+        <item>חבר11</item>
+        <item>חבר12</item>
+        <item>חבר13</item>
+        <item>חבר14</item>
+        <item>חבר15</item>
+        <item>חבר16</item>
+        <item>חבר17</item>
+        <item>חבר18</item>
+        <item>חבר19</item>
+
+    </string-array>
+    <string-array
+        name="Friends_Statuses">
+
+        <item>סטטוס0</item>
+        <item>סטטוס1</item>
+        <item>סטטוס2</item>
+        <item>סטטוס3</item>
+        <item>סטטוס4</item>
+        <item>סטטוס5</item>
+        <item>סטטוס6</item>
+        <item>סטטוס7</item>
+        <item>סטטוס8</item>
+        <item>סטטוס9</item>
+        <item>סטטוס10</item>
+        <item>סטטוס11</item>
+        <item>סטטוס12</item>
+        <item>סטטוס13</item>
+        <item>סטטוס14</item>
+        <item>סטטוס15</item>
+        <item>סטטוס16</item>
+        <item>סטטוס17</item>
+        <item>סטטוס18</item>
+        <item>סטטוס19</item>
+
+
+    </string-array>
+    <string-array name="Demo_conversation">
+
+        <item>היי</item>
+        <item>שלום</item>
+        <item>מה שלומך?</item>
+        <item>אני מעולה</item>
+
+
+    </string-array>
+
+    <string name="menu_settings_lable">הגדרות</string>
+    <string name="menu_friend_list_lable">רשימת חברים</string>
+    <string name="menu_add_a_new_friend">הוסף חבר חדש</string>
+
+    <string name="Add_Friend_new_friend_name">שם החבר החדש</string>
+    <string name="Add_Friend_add_button">הוסף</string>
+
+    <string name="Settings_title">הגדרות</string>
+    <string name="Settings_text">שגיאה 404 תרגום מEnglish נכשל
+</string>
+
+    <string name="chat_sent">הקלד הודעה</string>
+    <string name="chat_sent_button">שלח</string>
+    <string name="title_activity_chat">ChatActivity</string>
+
+
+    <string name="title_activity_manu">ManuActivity</string>
+    <string name="title_activity_maps">Map</string>
+    <string name="title_activity_add_friend">הוסף חבר</string>
+    <string name="title_activity_settings_">Settings_Activity</string>
+    <string name="Menu_Maps_Title">תפריט</string>
+    <string name="maps_me">אני</string>
+    <string name="THIS_IS_YOU_MSG">זה את/ה</string>
+
+    <string-array
+        name="splash_names">
+        <item>שלדון כופר</item>
+        <item>לנארד הופסטטר</item>
+        <item>הרוארד ווליץ</item>
+        <item>ראזאש</item>
+        <item>פני פני פני</item>
+    </string-array>
+</resources>

@@ -1,0 +1,48 @@
+<android.support.v4.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent" tools:context="com.example.orwn.ex4.Chat.ChatFragment"
+    android:id="@+id/map_swipeLayout">
+    <LinearLayout
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:orientation="horizontal"
+        android:id="@+id/maps_layout">
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/map_container"
+            android:layout_marginTop="100dp">
+            <fragment xmlns:android="http://schemas.android.com/apk/res/android"
+                    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+                    android:layout_height="match_parent" android:id="@+id/map"
+                    tools:context="com.example.orwn.ex4.MapsActivity"
+                    android:name="com.google.android.gms.maps.SupportMapFragment"
+                >
+
+
+                <RelativeLayout
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+
+                    >
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/Menu_Maps_Title"
+                    android:id="@+id/button_menu"
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginTop="30dp"/>
+                </RelativeLayout>
+
+            </fragment>
+
+        </RelativeLayout>
+
+
+
+    </LinearLayout>
+</android.support.v4.widget.SwipeRefreshLayout>
+
+
+

@@ -1,0 +1,62 @@
+
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="fill_parent"
+    android:layout_height="fill_parent" tools:context="com.example.orwn.ex4.Screens.FriendInfoFragment"
+    android:background="#aa000000"
+    android:id="@+id/friend_info_layout"
+
+    android:layout_centerVertical="true">
+
+    <!-- TODO: Update blank fragment layout -->
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="#000000"
+        android:id="@+id/friend_info_relative"
+        android:layout_gravity="center">
+      <ImageView
+          android:layout_width="wrap_content"
+          android:layout_marginTop="30dp"
+          android:layout_marginLeft="30dp"
+          android:layout_height="wrap_content"
+          android:id="@+id/profile_picture"
+          android:src="@drawable/ic_launcher"
+          />
+
+
+
+
+          <TextView
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:textAppearance="?android:attr/textAppearanceLarge"
+
+                  android:id="@+id/friendInfo_txt1"
+                  android:layout_gravity="center_vertical"
+                  android:padding="10dp"
+              android:text="Large Text"
+                  android:layout_below="@id/profile_picture"
+                  android:textColor="#ffffff"
+                  />
+              <TextView
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_below="@id/friendInfo_txt1"
+                  android:textAppearance="?android:attr/textAppearanceLarge"
+
+                  android:id="@+id/friendInfo_txt2"
+
+                  android:padding="10dp"
+
+                  android:layout_gravity="center_vertical"
+                  android:textColor="#ffffff"
+                 />
+
+
+
+
+
+
+      </RelativeLayout>
+</FrameLayout>
+

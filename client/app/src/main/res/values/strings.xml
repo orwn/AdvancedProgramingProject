@@ -1,0 +1,106 @@
+<resources>
+    <string name="app_name">BAZINGA</string>
+    <string name="title_activity_splash">SplashActivity</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_main">MainActivity</string>
+
+    <string name="maps_me">ME</string>
+
+<!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string-array
+        name="splash_names">
+        <item>Sheldon Cooper</item>
+        <item>Leonard Hofstadter</item>
+        <item>Howard Wolowitz</item>
+        <item>Rajesh Kootherappali</item>
+        <item>Penny Penny Penny</item>
+    </string-array>
+    <string-array name="Friends_Names">
+
+        <item>friend0</item>
+        <item>friend1</item>
+        <item>friend2</item>
+        <item>friend3</item>
+        <item>friend4</item>
+        <item>friend5</item>
+        <item>friend6</item>
+        <item>friend7</item>
+        <item>friend8</item>
+        <item>friend9</item>
+        <item>friend10</item>
+        <item>friend11</item>
+        <item>friend12</item>
+        <item>friend13</item>
+        <item>friend14</item>
+        <item>friend15</item>
+        <item>friend16</item>
+        <item>friend17</item>
+        <item>friend18</item>
+        <item>friend19</item>
+
+    </string-array>
+
+    <string-array name="Demo_conversation">
+
+        <item>hey</item>
+        <item>hello</item>
+        <item>how do you do?</item>
+        <item>I\'m great</item>
+
+
+    </string-array>
+    <string-array
+        name="Friends_Statuses">
+
+        <item>status0</item>
+        <item>status1</item>
+        <item>status2</item>
+        <item>status3</item>
+        <item>status4</item>
+        <item>status5</item>
+        <item>status6</item>
+        <item>status7</item>
+        <item>status8</item>
+        <item>status9</item>
+        <item>status10</item>
+        <item>status11</item>
+        <item>status12</item>
+        <item>status13</item>
+        <item>status14</item>
+        <item>status15</item>
+        <item>status16</item>
+        <item>status17</item>
+        <item>status18</item>
+        <item>status19</item>
+
+
+
+    </string-array>
+    <string name="menu_btn">menu</string>
+    <string name="menu_settings_lable">Settings</string>
+    <string name="menu_friend_list_lable">Friends List</string>
+    <string name="menu_add_a_new_friend">Add a new friend</string>
+
+    <string name="Add_Friend_new_friend_name"> New Friend\'s Name</string>
+    <string name="Add_Friend_add_button">Add</string>
+
+    <string name="Settings_title">Settings</string>
+    <string name="Settings_text">Go away I am busy.. stragers are not allowed
+    by the way hemi is my ~undisputed~ king BAZINGA</string>
+
+    <string name="chat_sent">Enter a Message</string>
+    <string name="chat_sent_button">SENT</string>
+    <string name="title_activity_chat">ChatActivity</string>
+
+
+    <string name="title_activity_manu">ManuActivity</string>
+    <string name="title_activity_maps">Map</string>
+    <string name="title_activity_add_friend">AddFriend</string>
+    <string name="title_activity_settings_">Settings_Activity</string>
+    <string name="Menu_Maps_Title">Menu</string>
+
+    <string name="THIS_IS_YOU_MSG">THIS IS YOU</string>
+</resources>
