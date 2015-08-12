@@ -48,6 +48,7 @@ class User(ndb.Model):
 	nickname = ndb.StringProperty()
 	link = ndb.StringProperty()
 	lastSeen = ndb.DateTimeProperty()
+	isChange = ndb.BooleanProperty()
 	
 
 	
@@ -122,12 +123,29 @@ class Channels(ndb.Model):
 	def to_JSON(self):
 		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
 
+# Class Converts Network to JSON
+class Network(ndb.Model):
+	def __init__(self, channels):
+		self.channels = channels
+	def to_JSON(self):
+		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
+
+# Class converts members to JSON
+class Members(ndb.Model):
+	def __init__(self, channel_id,members):
+		self.id = channel_id
+		self.members = members
+	def to_JSON(self):
+		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
+
 
 # Class that inverts list of channel to JSON
 class Messages(ndb.Model):
 	def __init__(self, messages,link):
 		self.messages = messages
 		self.change_server = link
+	def __init__(self, messages):
+		self.messages = messages
 	def to_JSON(self):
 		return json.dumps(self, default=lambda o: o.__dict__,sort_keys=True, indent=4)
 
@@ -174,17 +192,17 @@ class Register(webapp2.RequestHandler):
 		# If there are more than 3 servers
 		
 		if query.count()>=3:
-			m = R_Msg(0,'Full')
+		    m = R_Msg(0,'Full')
 		# Less than 3 servers
 		else:
-			key = ndb.Key('Server', self.request.get('link'))
-	        if key.get() is None:
-	        	server = Server(id = self.request.get('link'),link = self.request.get('link'))
-	        	server.put()
-	        	m = R_Msg(1,'')
-	        else:
-	        	m = R_Msg(0,'Already Linked')           
-	   	self.response.write(m.to_JSON())
+		    key = ndb.Key('Server', self.request.get('link'))
+                    if key.get() is None:
+                        server = Server(id = self.request.get('link'),link = self.request.get('link'))
+                        server.put()
+                        m = R_Msg(1,'')
+                    else:
+                        m = R_Msg(0,'Already Linked')           
+                self.response.write(m.to_JSON())
 
 
 	
@@ -227,6 +245,7 @@ class UserBLogin(webapp2.RequestHandler):
        		f_addUser(user.nickname(),link = MY_LINK)
        		f_update_all(user.nickname(),ACTION_LOGIN_CHANNEL,f_server_JSON(MY_LINK))
        		m = R_Msg('1','Succeeded')
+                removeChannelsToOtherServers()
        	else:
        		m = R_Msg('0','failed')
 	   		
@@ -246,6 +265,7 @@ class UserLogin(webapp2.RequestHandler):
         		f_addUser(user.nickname(),link = MY_LINK)
        			f_update_all(user.nickname(),ACTION_LOGIN_CHANNEL,f_server_JSON(MY_LINK))
         		m = R_Msg('1','')
+                        removeChannelsToOtherServers()
     			
         	else:
         		m = R_Msg('0','User Already log in')
@@ -580,6 +600,31 @@ class GetChannels(webapp2.RequestHandler):
 		chans = Channels(channels)
 		self.response.out.write(chans.to_JSON())
 
+# Getting chennls
+class getNetwork(webapp2.RequestHandler):
+	def get(self):
+		# Select all the channels from the channel table
+		query = ndb.gql("""SELECT * FROM Channel""")
+		network = []
+		# For each channel adding it to a channel array
+		for channel in query:
+			members = []
+			channel_id = channel.channel_id
+			query_members = ndb.gql("""SELECT * FROM ChannelUser""")
+			query = ndb.gql("""SELECT * FROM ChannelUser""")
+			for channelUser in query:
+				if channelUser.channel.get().channel_id == channel_id:
+					members.append(channelUser.user.id())
+			m = Members(channel_id,members)
+			network.append(m)	
+				# == channel_id and channelUser.user.id() == user_name:
+		
+			
+
+		# Convert to JSON and sent it as a responde
+		net = Network(network)
+		self.response.out.write(net.to_JSON())
+
 # Gets updates
 class GetUpdates(webapp2.RequestHandler):
 	def get(self):
@@ -598,9 +643,17 @@ class GetUpdates(webapp2.RequestHandler):
 						messages.append(Message_User_Json(m.channel.get().channel_id,m.user.id(),m.text,m.longtitude,m.latitude))
 
 				# Convert to JSON and sent it as a responde
-				key.get().lastSeen = datetime.now()
-				key.get().put()
-				mss = Messages(messages,MY_LINK)
+				'''key.get().lastSeen = datetime.now()
+				key.get().put()'''
+				entity = key.get()
+				entity.lastSeen = datetime.now()
+				mss = Messages(messages)
+				#if we need to change the server because we moved this client
+				if (entity.isChange):
+                                    link = entity.link
+                                    entity.isChange = False
+                                    mss = Messages(messages,link)
+                                entity.put()
 				
 			else:
 				mss = R_Msg('0','User is disconnected!')
@@ -610,11 +663,145 @@ class GetUpdates(webapp2.RequestHandler):
 		# Responsing
 		self.response.out.write(mss.to_JSON())
 
+class ChangeChannels(webapp2.RequestHandler):
+        def post(self):
+                ans = 0
+                channels_str = self.request.get('remove')
+                link_to_ser = self.request.get('linkToServer')
+                channels_lst = channels_str.split(",")
+                #summing the number of clients that will be transfered to
+                #us if we took those channels
+                clients = 0
+                for ch_id in channels_lst:
+                        form_fields = {
+                            "id": ch_id
+                        }
+                        form_data = urllib.urlencode(form_fields)
+                        result = urlfetch.fetch(url=link_to_ser+'/getNumOfClient',
+                            payload=form_data,
+                            method=urlfetch.GET,
+                            headers={'Content-Type': 'application/x-www-form-urlencoded'})
+                        clients += int(result)
+                #getting the number of users currently connected to each server
+                #(our server and the other one)
+                query = ndb.gql("""SELECT * FROM User WHERE link = :serLink """,serLink = MY_LINK)
+		myClients = query.count()
+                avg = f_avgNumOfClients()
+		#deciding if by accepting we will get a more balanced network by
+		#checking if the change will bring us close to the average
+                query = ndb.gql("""SELECT * FROM Server""")
+                numOfSer = query.count()
+                if (myClients + clients <= avg + numOfSer):
+                    ans = 1
+		m = R_Msg(ans,'')
+                self.response.out.write(m.to_JSON())
+                if ans == 0:
+                    return
+                #if we accepted, updating that those channel are ours
+                for ch_id in channels_lst:
+                    key = ndb.Key('Channel',ch_id)
+                    entity = key.get()
+                    entity.isMine = True
+                    entity.put()
+
+def removeChannelsToOtherServers():
+        avg = f_avgNumOfClients()
+        #check if we have more than the average amount of clients
+        query = ndb.gql("""SELECT * FROM User WHERE link = :serLink """,serLink = MY_LINK)
+	myClients = query.count()
+        query = ndb.gql("""SELECT * FROM Server""")
+        numOfSer = query.count()
+	if (myClients <= avg + numOfSer):
+            return
+        #getting the other servers
+	query = ndb.gql("""SELECT * FROM Server""")
+        servers = []
+	for s in query:
+		servers.append(Server_JSON(server = s.link))
+        #choosing which channels to change
+        gaveCh = 0
+        for link_to_ser in servers:
+            for ch_id in channels_lst:
+                #checking if it makes sense to move the channel to the other server
+                form_fields = {
+                    "id": ch_id
+                }
+                form_data = urllib.urlencode(form_fields)
+                result = urlfetch.fetch(url=link_to_ser+'/getNumOfClient',
+                    payload=form_data,
+                    method=urlfetch.GET,
+                    headers={'Content-Type': 'application/x-www-form-urlencoded'})
+                otherClientsInCh = int(result)
+                myClientsInCh = f_getNumOfClient(ch_id)
+                #if it does, asking him to get the channel
+                if myClientsInCh > 0 and myClientsInCh < otherClientsInCh:
+                    form_fields = {
+                        "id": ch_id
+                    }
+                    form_data = urllib.urlencode(form_fields)
+                    result = urlfetch.fetch(url=link_to_ser+'/changeChannels',
+                        payload=form_data,
+                        method=urlfetch.POST,
+                        headers={'Content-Type': 'application/x-www-form-urlencoded'})
+                    jason = json.loads(resault)
+                    ans = jason["status"]
+                    #if we gave one channel it means we should be balanced
+                    if (ans == 1):
+                        f_agreedToTakeChannel(ch_id,link_to_ser)
+                        gaveCh = 1
+                        return
+        #if we didn't give any channel we will try again with all of
+        #the channels because we are currently not balanced
+        for ch_id in channels_lst:
+            form_fields = {
+                "id": ch_id
+            }
+            form_data = urllib.urlencode(form_fields)
+            result = urlfetch.fetch(url=link_to_ser+'/changeChannels',
+                payload=form_data,
+                method=urlfetch.POST,
+                headers={'Content-Type': 'application/x-www-form-urlencoded'})
+            jason = json.loads(resault)
+            ans = jason["status"]
+            #if we gave one channel it means we should be balanced
+            if (ans == 1):
+                f_agreedToTakeChannel(ch_id,link_to_ser)
+                gaveCh = 1
+                return
+                
+            
+
+        
 # function for adding data for table
+
+def f_agreedToTakeChannel(ch_id,link):
+	query = ndb.gql("""SELECT user FROM ChannelUser WHERE channel = :channel""", channel = ch_id)
+	#------------------i am not sure if it gives me the users name or i need to do something
+	#before that-------------------------------
+	#marking that we need to update those users (in getUpdates)
+	#that they need to change server
+	for us in query:
+            key = ndb.Key('User', us.id)
+            entity = key.get()
+            entity.isChange = True
+            entity.link = link
+            entity.put()
+            
+        
+
+#getting the average number of clients per server
+def f_avgNumOfClients():
+        query = ndb.gql("""SELECT * FROM User""")
+        usersNum = query.count()
+        query = ndb.gql("""SELECT * FROM Server""")
+        serversNum = query.count()
+        avg = usersNum / (serversNum + 1)
+        return avg
+    
 
 # Add user
 def f_addUser(user_name,link):
-	user = User(id = user_name,nickname = user_name,link = link,lastSeen = datetime.now())
+	user = User(id = user_name,nickname = user_name,link = link,lastSeen = datetime.now(),isChange = False)
 	user.put()
 	pass
 # Delete user
@@ -793,6 +980,7 @@ app = webapp2.WSGIApplication([
     ('/redirect',Redirect),
     ('/getServers',GetServers),
     ('/getChannels',GetChannels),
-    ('/getUpdates',GetUpdates)
+    ('/getUpdates',GetUpdates),
+    ('/getNetwork',getNetwork)
 
 ], debug=True)
