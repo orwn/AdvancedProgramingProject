@@ -529,7 +529,7 @@ class LeaveChannel(webapp2.RequestHandler):
 						f_update_all(user.nickname(),ACTION_LEAVE_CHANNEL,f_channel_id_JSOM(channel_id))
 						
 						# If the channel is empty now
-						if f_getNumOfClient == 0:
+						if f_getNumOfClient(channel_id) == 0:
 							# Delete channel
 							f_delChannl(channel_id)
 							# Updating others
@@ -844,7 +844,8 @@ def f_delChannelUser(user_name,channel_id):
 	user_key = ndb.Key('User', user_name)
 	query = ndb.gql("""SELECT * FROM ChannelUser WHERE channel = :channel AND user = :user"""
 		,channel = channel_key,user = user_key)
-	channel_key.delete()
+	
+	#channel_key.delete()
 
 	for channelUser in query:
 		channelUser.key.delete()
