@@ -630,6 +630,7 @@ class GetUpdates(webapp2.RequestHandler):
 	def get(self):
 		user = users.get_current_user()
 		# if the user exists
+		#self.response.out.write("*******test******\n")
 		if user:
 			key = ndb.Key('User', user.nickname()) 
 			# Checking if the user loged in
@@ -640,7 +641,14 @@ class GetUpdates(webapp2.RequestHandler):
 				# For each channel adding it to a channel array
 				for m in query:
 					if m.datetime > key.get().lastSeen:
-						messages.append(Message_User_Json(m.channel.get().channel_id,m.user.id(),m.text,m.longtitude,m.latitude))
+						# self.response.out.write(m)
+						# self.response.out.write("\n")
+						# self.response.out.write(m.channel)
+						# self.response.out.write("\n")
+						# #key = ndb.Key('Channel',m.channel)
+
+						channel_id = m.channel.get().channel_id
+						messages.append(Message_User_Json(channel_id,m.user.id(),m.text,m.longtitude,m.latitude))
 
 				# Convert to JSON and sent it as a responde
 				'''key.get().lastSeen = datetime.now()
@@ -844,6 +852,15 @@ def f_delChannelUser(user_name,channel_id):
 # Deleting channel
 def f_delChannl(channel_id):
 	channel_key = ndb.Key('Channel',channel_id)
+
+	query = ndb.gql("""SELECT * FROM ChannelUser WHERE channel = :channel""",channel = channel_key)
+	for channelUser in query:
+		channelUser.key.delete()
+
+	query = ndb.gql("""SELECT * FROM Message WHERE channel = :channel """,channel = channel_key)
+	for m in query:
+		m.key.delete()
+
 	channel_key.delete()
 
 # 
@@ -925,7 +942,7 @@ def f_update(url,user,action,data):
 	}
 	form_data = urllib.urlencode(form_fields)
 	# sending
-	result = urlfetch.fetch(url=url+'update',
+	result = urlfetch.fetch(url=url+'/'+'update',
 	    payload=form_data,
 	    method=urlfetch.POST,
 	    headers={'Content-Type': 'application/x-www-form-urlencoded'})
